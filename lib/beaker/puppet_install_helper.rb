@@ -108,10 +108,23 @@ module Beaker::PuppetInstallHelper
     ENV['PUPPET_INSTALL_VERSION'] || ENV['PUPPET_VERSION']
   end
 
+  def hosts_contains_windows_agent?(hosts)
+    hosts_with_role(hosts, 'agent').select { |host| host['platform'].match(/^windows/) }.size > 0
+  end
+
   def install_agent_on(hosts, collection, version)
     if ENV['PUPPET_AGENT_SHA'].nil?
-      opts = options.merge(puppet_collection: collection,
-                           version: version)
+      opts = if hosts_contains_windows_agent?(hosts)
+               if version && version.match(/5\.\d\.\d/)
+                 options.merge(version: version,
+                               puppet_collection: 'puppet5')
+               else
+                 options.merge(version: version)
+               end
+             else
+               options.merge(version: version,
+                             puppet_collection: collection)
+             end
       install_puppet_agent_on(hosts, opts)
     else
       opts = options.merge(puppet_collection: collection,
